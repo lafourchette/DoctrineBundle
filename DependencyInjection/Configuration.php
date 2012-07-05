@@ -157,6 +157,27 @@ class Configuration implements ConfigurationInterface
         ;
         $this->configureDbalDriverNode($slaveNode);
 
+        $shardNode = $connectionNode
+            ->children()
+                ->scalarNode('global')->end()
+                ->scalarNode('shard_choser_class')->defaultValue('Doctrine\DBAL\Sharding\ShardChoser\MultiTenantShardChoser')->end()
+                ->arrayNode('shards')
+                    ->useAttributeAsKey('name')
+                    ->prototype('array')
+                    ->children()
+                        ->scalarNode('id')->isRequired()->end()
+                    ->end()
+        ;
+        $this->configureDbalDriverNode($shardNode);
+        
+        $shardingSlaveNode = $shardNode
+            ->children()
+                ->arrayNode('slaves')
+                    ->useAttributeAsKey('name')
+                    ->prototype('array')
+        ;
+        $this->configureDbalDriverNode($shardingSlaveNode);
+
         return $node;
     }
 

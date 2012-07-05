@@ -183,7 +183,7 @@ class DoctrineExtension extends AbstractDoctrineExtension
                 'driver' => true, 'driverOptions' => true, 'driverClass' => true, 'wrapperClass' => true,
                 'platform' => true, 'slaves' => true, 'master' => true,
                 // included by safety but should have been unset already
-                'logging' => true, 'profiling' => true, 'mapping_types' => true, 'platform_service' => true,
+                'logging' => true, 'profiling' => true, 'mapping_types' => true, 'platform_service' => true, 'dbname' => true
             );
             foreach ($options as $key => $value) {
                 if (isset($nonRewrittenKeys[$key])) {
@@ -198,6 +198,39 @@ class DoctrineExtension extends AbstractDoctrineExtension
             }
         } else {
             unset($options['slaves']);
+        }
+
+        if (!empty($options['shards'])) {
+            $nonRewrittenKeys = array(
+                'driver' => true, 'driverOptions' => true, 'driverClass' => true, 'wrapperClass' => true,
+                'platform' => true, 'global' => true, 'shards' => true, 'shardChoser' => true, 'shardManager' => true, 'slaves' => true,
+                // included by safety but should have been unset already
+                'logging' => true, 'profiling' => true, 'mapping_types' => true, 'platform_service' => true, 'dbname' => true
+            );
+            
+            foreach (array(
+                'shard_choser_class' => 'shardChoser',
+            ) as $old => $new) {
+                if (isset($options[$old])) {
+                    $options[$new] = $options[$old];
+                    unset($options[$old]);
+                }
+            }
+            
+            foreach ($options as $key => $value) {
+                if (isset($nonRewrittenKeys[$key])) {
+                    continue;
+                }
+                $options['global'][$key] = $value;
+                unset($options[$key]);
+            }
+            
+            if (empty($options['wrapperClass'])) {
+                // Change the wrapper class only if the user does not already forced using a custom one.
+                $options['wrapperClass'] = 'Doctrine\\DBAL\\Sharding\\PoolingShardConnection';
+            }
+        } else {
+            unset($options['shards']);
         }
 
         return $options;

@@ -230,6 +230,14 @@ class DoctrineExtension extends AbstractDoctrineExtension
                 $connection['mapping_types'],
             ))
         ;
+
+        // Create a shard_manager for this connection
+        if (isset($options['shards'])) {
+            $shardManagerDefinition = new Definition($options['shardManagerClass'], array(
+                new Reference(sprintf('doctrine.dbal.%s_connection', $name))
+            ));
+            $container->setDefinition(sprintf('doctrine.dbal.%s_shard_manager', $name), $shardManagerDefinition);
+        }
     }
 
     protected function getConnectionOptions($connection)
@@ -253,6 +261,7 @@ class DoctrineExtension extends AbstractDoctrineExtension
             'wrapper_class' => 'wrapperClass',
             'keep_slave' => 'keepSlave',
             'shard_choser' => 'shardChoser',
+            'shard_manager_class' => 'shardManagerClass',
             'server_version' => 'serverVersion',
         ) as $old => $new) {
             if (isset($options[$old])) {
@@ -294,6 +303,7 @@ class DoctrineExtension extends AbstractDoctrineExtension
                 'driver' => true, 'driverOptions' => true, 'driverClass' => true,
                 'wrapperClass' => true, 'keepSlave' => true, 'shardChoser' => true,
                 'platform' => true, 'slaves' => true, 'global' => true, 'shards' => true,
+                'serverVersion' => true,
                 // included by safety but should have been unset already
                 'logging' => true, 'profiling' => true, 'mapping_types' => true, 'platform_service' => true,
             );
@@ -304,17 +314,13 @@ class DoctrineExtension extends AbstractDoctrineExtension
                 $options['global'][$key] = $value;
                 unset($options[$key]);
             }
-            if (!isset($options['global']['driver'])) {
-                $options['global']['driver'] = $options['driver'];
-            }
-            foreach ($options['shards'] as $i => $shard) {
-                if (!isset($shard['driver'])) {
-                    $options['shards'][$i]['driver'] = $options['driver'];
-                }
-            }
             if (empty($options['wrapperClass'])) {
                 // Change the wrapper class only if the user does not already forced using a custom one.
                 $options['wrapperClass'] = 'Doctrine\\DBAL\\Sharding\\PoolingShardConnection';
+            }
+            if (empty($options['shardManagerClass'])) {
+                // Change the shard manager class only if the user does not already forced using a custom one.
+                $options['shardManagerClass'] = 'Doctrine\\DBAL\\Sharding\\PoolingShardManager';
             }
         } else {
             unset($options['shards']);
